@@ -20,8 +20,8 @@ if "chat_history" not in st.session_state:
     st.session_state.message_counter = 0
 
 # Predefined credentials for login (for demonstration purposes)
-USERNAME = ""
-PASSWORD = ""
+USERNAME = "user"
+PASSWORD = "password"
 
 
 def get_chatbot_response(user_input: str, api_key: str) -> str:
@@ -72,7 +72,6 @@ def login_page():
         if True:
             st.session_state.logged_in = True
             st.success("Login successful!")
-            st.experimental_rerun()  # Reload the page to show the chatbot
         else:
             st.error("Invalid username or password")
 
