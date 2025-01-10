@@ -66,7 +66,7 @@ def main():
     )
     
     if user_input:
-        with st.spinner("Thinking..."):
+        with st.spinner("Loading..."):
             response = get_chatbot_response(user_input, api_key)
             
             # Increment message counter
@@ -87,14 +87,14 @@ def main():
                 "You:",
                 chat["user"],
                 height=100,
-                disabled=True,
+                disabled=False,
                 key=f"user_message_{chat['id']}"
             )
             st.text_area(
                 "Travel Assistant:",
                 chat["bot"],
                 height=100,
-                disabled=True,
+                disabled=False,
                 key=f"bot_message_{chat['id']}"
             )
             st.markdown("---")
