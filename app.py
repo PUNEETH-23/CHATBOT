@@ -19,6 +19,10 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
     st.session_state.message_counter = 0
 
+# Predefined credentials for login (for demonstration purposes)
+USERNAME = "user"
+PASSWORD = "password"
+
 
 def get_chatbot_response(user_input: str, api_key: str) -> str:
     """
@@ -57,7 +61,27 @@ def get_chatbot_response(user_input: str, api_key: str) -> str:
         return f"An unexpected error occurred: {str(e)}"
 
 
+def login_page():
+    st.title("Login")
+    
+    # Login form
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    
+    if st.button("Login"):
+        if username == USERNAME and password == PASSWORD:
+            st.session_state.logged_in = True
+            st.success("Login successful!")
+            st.experimental_rerun()  # Reload the page to show the chatbot
+        else:
+            st.error("Invalid username or password")
+
 def main():
+    # Check if user is logged in
+    if "logged_in" not in st.session_state or not st.session_state.logged_in:
+        login_page()
+        return
+
     st.title("✈️ Travel Chatbot")
     st.write("Hello! I'm your travel assistant. Ask me anything about destinations, planning, or travel tips!")
 
@@ -106,14 +130,14 @@ def main():
                 f"You (Message {chat['id']}):",
                 chat["user"],
                 height=100,
-                disabled=True,
+                disabled=False,
                 key=f"user_message_{chat['id']}"
             )
             st.text_area(
                 f"Travel Assistant (Response {chat['id']}):",
                 chat["bot"],
                 height=200,
-                disabled=True,
+                disabled=False,
                 key=f"bot_message_{chat['id']}"
             )
             st.markdown("---")
