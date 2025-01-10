@@ -93,7 +93,7 @@ def main():
             st.text_area(
                 "Travel Assistant:",
                 chat["bot"],
-                height=100,
+                height=500,
                 disabled=False,
                 key=f"bot_message_{chat['id']}"
             )
