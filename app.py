@@ -19,10 +19,6 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
     st.session_state.message_counter = 0
 
-# Predefined credentials for login (for demonstration purposes)
-USERNAME = "user"
-PASSWORD = "password"
-
 
 def get_chatbot_response(user_input: str, api_key: str) -> str:
     """
@@ -60,20 +56,6 @@ def get_chatbot_response(user_input: str, api_key: str) -> str:
     except Exception as e:
         return f"An unexpected error occurred: {str(e)}"
 
-
-def login_page():
-    st.title("Login")
-    
-    # Login form
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    
-    if st.button("Login"):
-        if True:
-            st.session_state.logged_in = True
-            st.success("Login successful!")
-        else:
-            st.error("Invalid username or password")
 
 def main():
     # Check if user is logged in
