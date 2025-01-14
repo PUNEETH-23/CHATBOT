@@ -58,10 +58,6 @@ def get_chatbot_response(user_input: str, api_key: str) -> str:
 
 
 def main():
-    # Check if user is logged in
-    if "logged_in" not in st.session_state or not st.session_state.logged_in:
-        login_page()
-        return
 
     st.title("✈️ Travel Chatbot")
     st.write("Hello! I'm your travel assistant. Ask me anything about destinations, planning, or travel tips!")
@@ -122,7 +118,5 @@ def main():
                 key=f"bot_message_{chat['id']}"
             )
             st.markdown("---")
-
-
 if __name__ == "__main__":
     main()
