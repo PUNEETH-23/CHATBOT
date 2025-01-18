@@ -1,66 +1,108 @@
 import streamlit as st
 import google.generativeai as genai
 from typing import Optional
-from dotenv import load_dotenv
-import os
 
-# Load environment variables
-load_dotenv()
-
-# Configure page settings
+# Set page configurations for a better layout
 st.set_page_config(
     page_title="Travel Chatbot",
     page_icon="✈️",
-    layout="centered"
+    layout="wide"
 )
 
-# Custom CSS for ShadCN-inspired styling
+# Custom CSS for updated UI/UX with new color scheme and animations
 st.markdown("""
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-            color: #1f2937;
+            background-color: #F6F4F0;  /* Soft Off-White */
+            color: #2E5077;  /* Deep Blue */
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            color: #2E5077;  /* Deep Blue */
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
         }
         .stButton>button {
-            background-color: #2563eb;
-            color: white;
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
+            background-color: #79D7BE;  /* Soft Mint */
+            color: #2E5077;  /* Deep Blue */
+            border-radius: 1rem;
+            padding: 1rem 2rem;
+            font-size: 1.25rem;
             font-weight: 600;
-            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s ease;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
         }
         .stButton>button:hover {
-            background-color: #1e40af;
+            background-color: #4DA1A9;  /* Teal Blue */
+            transform: scale(1.05);
         }
-        .stTextInput input {
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
+        .stTextInput input, .stTextArea textarea {
+            border: 1px solid #4DA1A9;  /* Teal Blue */
+            border-radius: 1rem;
+            padding: 1rem;
+            font-size: 1.1rem;
             width: 100%;
             box-sizing: border-box;
+            transition: border-color 0.3s ease;
         }
-        .stTextInput input:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        .stTextInput input:focus, .stTextArea textarea:focus {
+            border-color: #79D7BE;  /* Soft Mint */
+            box-shadow: 0 0 0 3px rgba(121, 215, 190, 0.2);
         }
-        .stTextArea textarea {
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
-            width: 100%;
-            box-sizing: border-box;
+        .chat-container {
+            background-color: #F6F4F0;  /* Soft Off-White */
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.1);
+            margin-top: 2rem;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            animation: fadeIn 0.5s ease-out;
         }
-        .stTextArea textarea:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        .chat-box {
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 1rem;
+            font-size: 1.1rem;
+            line-height: 1.5;
+            max-width: 80%;
+            margin-left: auto;
+            margin-right: auto;
         }
-        .stMarkdown {
-            margin: 1rem 0;
+        .chat-box.bot {
+            background-color: #2E5077;  /* Deep Blue */
+            color: white;
+            text-align: left;
+            border-bottom-left-radius: 0;
+            border-top-right-radius: 0;
+        }
+        .chat-box.user {
+            background-color: #4DA1A9;  /* Teal Blue */
+            color: #F6F4F0;  /* Soft Off-White */
+            text-align: right;
+            border-bottom-right-radius: 0;
+            border-top-left-radius: 0;
+        }
+        /* Animation for smooth transition */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        .stTextInput input, .stTextArea textarea {
+            padding-left: 1.5rem;
+        }
+        .stTextInput input::placeholder, .stTextArea textarea::placeholder {
+            color: #A6A6A6;  /* Lighter Grey */
+            font-style: italic;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -90,28 +132,30 @@ def get_chatbot_response(user_input: str, api_key: str) -> str:
         
         # Create the prompt
         prompt = f"""
-        As a travel expert, provide a helpful and informative response to this query: {user_input}
-        Focus on providing specific, practical advice and relevant travel tips.
-        If the query isn't travel-related, politely redirect to travel topics.
-        """
+You are a friendly and knowledgeable travel expert, here to provide helpful, informative, and practical responses to travel-related queries. When answering, focus on offering specific advice, travel tips, and recommendations that can guide the user in planning their trip. Be clear, concise, and aim to create an engaging, pleasant experience for the user.
+
+If the question isn't travel-related, politely redirect the conversation by suggesting topics that are related to travel, such as destinations, packing tips, and travel planning. Keep the tone positive and friendly, and encourage further travel inquiries.
+
+User question: {user_input}
+"""
         
         # Generate the response
         response = model.generate_content(prompt)
         return response.text
-        
-    except genai.AuthenticationError:
-        return "Invalid API key. Please check your credentials."
-    except genai.ConnectionError:
-        return "Unable to connect to the Gemini AI server. Please try again later."
+
+    except ValueError as ve:
+        return "There was an issue with the input or response. Please try again."
+    except RuntimeError as re:
+        return "There was a runtime error. Please check your API connection and try again."
     except Exception as e:
-        return f"An unexpected error occurred: {str(e)}"
+        return f"An unexpected error occurred: {type(e).__name__} - {str(e)}"
 
 def main():
     st.title("✈️ Travel Chatbot")
     st.write("Hello! I'm your travel assistant. Ask me anything about destinations, planning, or travel tips!")
 
     # Get API key securely from environment or user input
-    api_key = '5823121ec24ba2e0a5cf374dc0104519f27ee59e'
+    api_key = 'AIzaSyCroupi2pzZ-oFzrEl2hLg8puCgchnJSqA'
     if not api_key:
         st.warning("API key is not set in the environment.")
         api_key = st.text_input(
@@ -124,13 +168,15 @@ def main():
 
     # Chat interface
     user_input = st.text_input(
-        "Your travel question:",
+        "Ask Me:",
         placeholder="E.g., What are the best times to visit Japan?",
         key="user_question_input"
     )
     
-    # Submit button
-    if st.button("Submit"):
+    # Submit button with better interaction
+    submit_button = st.button("Submit")
+    
+    if submit_button:
         if user_input:
             with st.spinner("Fetching your response..."):
                 response = get_chatbot_response(user_input, api_key)
@@ -146,26 +192,24 @@ def main():
                 })
         else:
             st.warning("Please enter a question before submitting.")
-
-    # Display chat history
+    
+    # Display chat history with improved UI
     if st.session_state.chat_history:
         st.write("### Chat History")
-        for chat in reversed(st.session_state.chat_history):
-            st.text_area(
-                f"You (Message {chat['id']}):",
-                chat["user"],
-                height=100,
-                disabled=True,
-                key=f"user_message_{chat['id']}"
-            )
-            st.text_area(
-                f"Travel Assistant (Response {chat['id']}):",
-                chat["bot"],
-                height=200,
-                disabled=True,
-                key=f"bot_message_{chat['id']}"
-            )
-            st.markdown("---")
+        chat_container = st.container()
+        with chat_container:
+            for chat in reversed(st.session_state.chat_history):
+                st.markdown(f"""
+                    <div class="chat-container">
+                        <div class="chat-box user">
+                            <strong></strong> {chat['user']}
+                        </div>
+                        <div class="chat-box bot">
+                            <strong></strong> {chat['bot']}
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+                st.markdown("<br>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
