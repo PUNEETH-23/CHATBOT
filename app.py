@@ -168,7 +168,7 @@ def main():
 
     # Chat interface
     user_input = st.text_input(
-        "Ask Me:",
+        "Question:",
         placeholder="E.g., What are the best times to visit Japan?",
         key="user_question_input"
     )
