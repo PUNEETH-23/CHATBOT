@@ -14,11 +14,61 @@ st.set_page_config(
     layout="centered"
 )
 
+# Custom CSS for ShadCN-inspired styling
+st.markdown("""
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1f2937;
+        }
+        .stButton>button {
+            background-color: #2563eb;
+            color: white;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+        .stButton>button:hover {
+            background-color: #1e40af;
+        }
+        .stTextInput input {
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .stTextInput input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+        .stTextArea textarea {
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .stTextArea textarea:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+        .stMarkdown {
+            margin: 1rem 0;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # Initialize session state for chat history and message counter
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
     st.session_state.message_counter = 0
-
 
 def get_chatbot_response(user_input: str, api_key: str) -> str:
     """
@@ -56,14 +106,12 @@ def get_chatbot_response(user_input: str, api_key: str) -> str:
     except Exception as e:
         return f"An unexpected error occurred: {str(e)}"
 
-
 def main():
-
     st.title("✈️ Travel Chatbot")
     st.write("Hello! I'm your travel assistant. Ask me anything about destinations, planning, or travel tips!")
 
     # Get API key securely from environment or user input
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = '5823121ec24ba2e0a5cf374dc0104519f27ee59e'
     if not api_key:
         st.warning("API key is not set in the environment.")
         api_key = st.text_input(
@@ -107,16 +155,17 @@ def main():
                 f"You (Message {chat['id']}):",
                 chat["user"],
                 height=100,
-                disabled=False,
+                disabled=True,
                 key=f"user_message_{chat['id']}"
             )
             st.text_area(
                 f"Travel Assistant (Response {chat['id']}):",
                 chat["bot"],
                 height=200,
-                disabled=False,
+                disabled=True,
                 key=f"bot_message_{chat['id']}"
             )
             st.markdown("---")
+
 if __name__ == "__main__":
     main()
