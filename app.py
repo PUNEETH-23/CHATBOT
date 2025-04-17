@@ -155,7 +155,7 @@ def main():
     st.write("Hello! I'm your travel assistant. Ask me anything about destinations, planning, or travel tips!")
 
     # Get API key securely from environment or user input
-    api_key = 'AIzaSyCroupi2pzZ-oFzrEl2hLg8puCgchnJSqA'
+    api_key = 'AIzaSyCtvegQKYnn4LPrO7midWUs0-2q98EtRpU'
     if not api_key:
         st.warning("API key is not set in the environment.")
         api_key = st.text_input(
