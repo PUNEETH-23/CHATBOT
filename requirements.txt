@@ -1,3 +1,3 @@
 streamlit
 speechrecognition
-openai
+openai==0.28
