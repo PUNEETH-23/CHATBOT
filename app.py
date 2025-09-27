@@ -76,7 +76,7 @@ def get_gemini_response(user_input: str, api_key: str) -> str:
 
         # Initialize the model
         model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash',
+            model_name='gemini-1.5-flash-latest',
             system_instruction=SYSTEM_PROMPT
         )
 
@@ -159,3 +159,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
