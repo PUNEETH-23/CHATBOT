@@ -1,43 +1,58 @@
 import streamlit as st
-import openai
+from openai import Gemini
 import os
 
 # Page config
 st.set_page_config(
-    page_title="Travel Chatbot",
-    page_icon="✈️",
+    page_title="Post-Surgery Adhesion Tracker",
+    page_icon="🩺",
     layout="wide"
 )
 
 # Custom CSS
 st.markdown("""
 <style>
-/* same CSS you wrote */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.chat-box {
+    padding: 10px;
+    border-radius: 8px;
+    max-width: 80%;
+}
+.user {
+    background-color: #d1f0ff;
+    align-self: flex-end;
+}
+.bot {
+    background-color: #f0f0f0;
+    align-self: flex-start;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# Session state init
+# Initialize session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
     st.session_state.message_counter = 0
 
-def get_chatbot_response(user_input: str, api_key: str) -> str:
-    """
-    Get response from OpenAI GPT for travel-related queries.
-    """
+# Function to call Gemini chat API
+def get_tracker_response(user_input: str, api_key: str) -> str:
     try:
-        client = openai.OpenAI(api_key=api_key)
+        client = Gemini(api_key=api_key)
 
         messages = [
-            {"role": "system", "content": "You are a friendly and knowledgeable travel assistant. Only answer travel-related questions and politely redirect if not travel-related."},
+            {"role": "system", "content": "You are a medical assistant specialized in post-surgery adhesion detection. Only ask or provide information about symptoms, affected body regions, and related post-surgery guidance. Politely redirect if the query is unrelated."},
             {"role": "user", "content": user_input}
         ]
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gemini-1.5",
             messages=messages,
-            max_tokens=300,
-            temperature=0.7
+            temperature=0.7,
+            max_output_tokens=300
         )
 
         return response.choices[0].message.content.strip()
@@ -46,37 +61,45 @@ def get_chatbot_response(user_input: str, api_key: str) -> str:
         return f"An error occurred: {type(e).__name__} - {str(e)}"
 
 def main():
-    st.title("✈️ Travel Chatbot")
-    st.write("Hello! I'm your travel assistant. Ask me anything about destinations, planning, or travel tips!")
+    st.title("🩺 Post-Surgery Adhesion Tracker")
+    st.write("Track post-surgery adhesion symptoms and affected regions. Answer the questions based on your condition.")
 
-    # API key handling
-    api_key = os.getenv("OPENAI_API_KEY", "")
+    # API key input
+    api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key:
-        api_key = st.text_input("Enter your OpenAI API Key:", type="password", key="api_key_input")
+        api_key = st.text_input("Enter your Gemini API Key:", type="password", key="api_key_input")
         if not api_key:
-            st.warning("API key is required to use the chatbot.")
+            st.warning("API key is required to use the tracker.")
             st.stop()
 
-    # Chat input
-    user_input = st.text_input(
-        "Question:",
-        placeholder="E.g., What are the best times to visit Japan?",
-        key="user_question_input"
+    # Symptom input
+    symptom_input = st.text_input(
+        "Describe your symptoms:",
+        placeholder="E.g., abdominal pain, bloating, nausea",
+        key="symptom_input"
     )
 
-    if st.button("Submit") and user_input:
-        with st.spinner("Fetching your response..."):
-            response = get_chatbot_response(user_input, api_key)
+    # Region input
+    region_input = st.selectbox(
+        "Select affected region:",
+        ["Abdomen", "Pelvis", "Lower back", "Other"],
+        key="region_input"
+    )
+
+    if st.button("Submit") and symptom_input:
+        user_question = f"Symptoms: {symptom_input}. Affected region: {region_input}."
+        with st.spinner("Analyzing symptoms..."):
+            response = get_tracker_response(user_question, api_key)
             st.session_state.message_counter += 1
             st.session_state.chat_history.append({
                 "id": st.session_state.message_counter,
-                "user": user_input,
+                "user": user_question,
                 "bot": response
             })
 
-    # Display history
+    # Display chat history
     if st.session_state.chat_history:
-        st.write("### Chat History")
+        st.write("### Patient Tracking History")
         for chat in reversed(st.session_state.chat_history):
             st.markdown(f"""
                 <div class="chat-container">
