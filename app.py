@@ -65,7 +65,7 @@ def main():
     st.write("Track post-surgery adhesion symptoms and affected regions. Answer the questions based on your condition.")
 
     # API key input
-    api_key = os.getenv("GEMINI_API_KEY", "")
+    api_key = "AIzaSyAhnRkBFUKzEiQeyZ038yw0zjo92xFUcrM"
     if not api_key:
         api_key = st.text_input("Enter your Gemini API Key:", type="password", key="api_key_input")
         if not api_key:
