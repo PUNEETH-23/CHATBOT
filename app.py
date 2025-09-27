@@ -38,7 +38,8 @@ Start the conversation by asking the first logical follow-up question based on t
 # Function to initialize the Gemini chat model
 def initialize_chat():
     """Initializes the Gemini Pro model and starts a chat session with the system prompt."""
-    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    # This is the corrected line
+    model = genai.GenerativeModel('gemini-pro')
     chat = model.start_chat(history=[
         {'role': 'user', 'parts': [SYSTEM_PROMPT]},
         {'role': 'model', 'parts': ["Understood. I am ready to assist with post-surgery adhesion symptom tracking. Please provide the affected region and initial symptoms."]}
