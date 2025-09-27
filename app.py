@@ -1,113 +1,161 @@
 import streamlit as st
-from openai import Gemini
+import google.generativeai as genai
 import os
 
-# Page config
+# --- Page Configuration ---
 st.set_page_config(
     page_title="Post-Surgery Adhesion Tracker",
     page_icon="🩺",
     layout="wide"
 )
 
-# Custom CSS
+# --- Custom CSS for Chat Bubbles ---
 st.markdown("""
 <style>
 .chat-container {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    margin-bottom: 20px;
 }
 .chat-box {
-    padding: 10px;
-    border-radius: 8px;
-    max-width: 80%;
+    padding: 12px;
+    border-radius: 12px;
+    max-width: 75%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    line-height: 1.6;
 }
 .user {
-    background-color: #d1f0ff;
+    background-color: #e1f5fe;
     align-self: flex-end;
+    color: #333;
+    border: 1px solid #b3e5fc;
 }
 .bot {
-    background-color: #f0f0f0;
+    background-color: #f1f8e9;
     align-self: flex-start;
+    color: #333;
+    border: 1px solid #dcedc8;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state
+
+# --- System Prompt for the Model ---
+SYSTEM_PROMPT = (
+    "You are a helpful and empathetic medical assistant specializing in post-surgery adhesion detection. "
+    "Your primary role is to ask clarifying questions about symptoms and affected body regions "
+    "and provide general post-surgery guidance. You must strictly adhere to the following rules:\n"
+    "1. Only discuss symptoms, affected body regions, and related post-surgery topics.\n"
+    "2. If the user asks for a diagnosis, medical advice, or prescription, you MUST refuse and advise them to consult a healthcare professional immediately. State that you are an AI assistant and cannot provide medical diagnoses.\n"
+    "3. If the user's query is unrelated to post-surgery symptoms or care, politely redirect them back to the topic.\n"
+    "4. Keep your responses concise, clear, and easy to understand for a non-medical person."
+)
+
+
+# --- Initialize Session State ---
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
-    st.session_state.message_counter = 0
 
-# Function to call Gemini chat API
-def get_tracker_response(user_input: str, api_key: str) -> str:
+
+# --- Function to call Gemini API ---
+def get_gemini_response(user_input: str, api_key: str) -> str:
+    """
+    Calls the Gemini API to get a response based on user input.
+
+    Args:
+        user_input: The user's message.
+        api_key: The Google AI API key.
+
+    Returns:
+        The model's response as a string.
+    """
     try:
-        client = Gemini(api_key=api_key)
+        # Configure the generative AI library with the API key
+        genai.configure(api_key=api_key)
 
-        messages = [
-            {"role": "system", "content": "You are a medical assistant specialized in post-surgery adhesion detection. Only ask or provide information about symptoms, affected body regions, and related post-surgery guidance. Politely redirect if the query is unrelated."},
-            {"role": "user", "content": user_input}
-        ]
-
-        response = client.chat.completions.create(
-            model="gemini-1.5",
-            messages=messages,
-            temperature=0.7,
-            max_output_tokens=300
+        # Initialize the model
+        model = genai.GenerativeModel(
+            model_name='gemini-1.5-flash',
+            system_instruction=SYSTEM_PROMPT
         )
 
-        return response.choices[0].message.content.strip()
+        # Generate content
+        response = model.generate_content(user_input)
+
+        return response.text
 
     except Exception as e:
-        return f"An error occurred: {type(e).__name__} - {str(e)}"
+        st.error(f"An error occurred while contacting the AI model: {str(e)}")
+        return "Sorry, I'm having trouble responding right now. Please check the API key and try again."
+
 
 def main():
+    """Main function to run the Streamlit app."""
     st.title("🩺 Post-Surgery Adhesion Tracker")
-    st.write("Track post-surgery adhesion symptoms and affected regions. Answer the questions based on your condition.")
+    st.markdown("This tool helps you track symptoms that might be related to post-surgical adhesions. This is not a diagnostic tool. **Always consult a healthcare professional for medical advice.**")
 
-    # API key input
-    api_key = "AIzaSyAhnRkBFUKzEiQeyZ038yw0zjo92xFUcrM"
+    # --- API Key Input ---
+    # Using st.secrets is the recommended way for deployed apps.
+    # For local development, you can use the text input.
+    try:
+        # Check for the API key in Streamlit secrets
+        api_key = st.secrets["GEMINI_API_KEY"]
+    except (FileNotFoundError, KeyError):
+        # If not found, ask the user to input it
+        st.info("Please provide your Google AI API Key to begin.", icon="🔑")
+        api_key = st.text_input(
+            "Enter your Google AI API Key:",
+            type="password",
+            key="api_key_input",
+            help="You can get your key from Google AI Studio."
+        )
+
     if not api_key:
-        api_key = st.text_input("Enter your Gemini API Key:", type="password", key="api_key_input")
-        if not api_key:
-            st.warning("API key is required to use the tracker.")
-            st.stop()
+        st.warning("An API key is required to use the tracker.")
+        st.stop()
 
-    # Symptom input
-    symptom_input = st.text_input(
-        "Describe your symptoms:",
-        placeholder="E.g., abdominal pain, bloating, nausea",
-        key="symptom_input"
-    )
 
-    # Region input
-    region_input = st.selectbox(
-        "Select affected region:",
-        ["Abdomen", "Pelvis", "Lower back", "Other"],
-        key="region_input"
-    )
+    # --- User Input Fields ---
+    with st.form("symptom_form"):
+        st.subheader("Describe Your Current Condition")
+        col1, col2 = st.columns(2)
+        with col1:
+            symptom_input = st.text_area(
+                "Describe your symptoms in detail:",
+                placeholder="E.g., sharp pain in the lower abdomen, feeling bloated after eating, persistent nausea.",
+                key="symptom_input",
+                height=150
+            )
+        with col2:
+            region_input = st.selectbox(
+                "Select the primary affected region:",
+                ["", "Abdomen", "Pelvis", "Chest", "Lower back", "Other"],
+                key="region_input"
+            )
 
-    if st.button("Submit") and symptom_input:
-        user_question = f"Symptoms: {symptom_input}. Affected region: {region_input}."
-        with st.spinner("Analyzing symptoms..."):
-            response = get_tracker_response(user_question, api_key)
-            st.session_state.message_counter += 1
-            st.session_state.chat_history.append({
-                "id": st.session_state.message_counter,
-                "user": user_question,
-                "bot": response
-            })
+        submit_button = st.form_submit_button("Submit Symptoms")
 
-    # Display chat history
+    if submit_button and symptom_input and region_input:
+        user_question = f"My symptoms are: '{symptom_input}'. The primary affected region is: {region_input}."
+        with st.spinner("Analyzing..."):
+            response = get_gemini_response(user_question, api_key)
+            st.session_state.chat_history.append({"user": user_question, "bot": response})
+    elif submit_button:
+        st.warning("Please describe your symptoms and select an affected region before submitting.")
+
+
+    # --- Display Chat History ---
     if st.session_state.chat_history:
-        st.write("### Patient Tracking History")
+        st.subheader("Your Tracking History")
         for chat in reversed(st.session_state.chat_history):
             st.markdown(f"""
                 <div class="chat-container">
-                    <div class="chat-box user">{chat['user']}</div>
-                    <div class="chat-box bot">{chat['bot']}</div>
+                    <div class="chat-box user"><b>You:</b><br>{chat['user']}</div>
+                    <div class="chat-box bot"><b>Assistant:</b><br>{chat['bot']}</div>
                 </div>
             """, unsafe_allow_html=True)
-            st.markdown("<br>", unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     main()
