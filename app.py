@@ -6,157 +6,141 @@ import os
 st.set_page_config(
     page_title="Post-Surgery Adhesion Tracker",
     page_icon="🩺",
-    layout="wide"
+    layout="centered"
 )
 
-# --- Custom CSS for Chat Bubbles ---
-st.markdown("""
-<style>
-.chat-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-.chat-box {
-    padding: 12px;
-    border-radius: 12px;
-    max-width: 75%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    line-height: 1.6;
-}
-.user {
-    background-color: #e1f5fe;
-    align-self: flex-end;
-    color: #333;
-    border: 1px solid #b3e5fc;
-}
-.bot {
-    background-color: #f1f8e9;
-    align-self: flex-start;
-    color: #333;
-    border: 1px solid #dcedc8;
-}
-</style>
-""", unsafe_allow_html=True)
+# --- Gemini API Configuration ---
+try:
+    api_key = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=api_key)
+except (KeyError, AttributeError):
+    st.error("🚨 Gemini API Key not found. Please add it to your Streamlit secrets.", icon="🚨")
+    st.stop()
 
+# --- AI Model and System Prompt ---
+SYSTEM_PROMPT = """
+You are a highly specialized medical assistant for tracking post-surgery adhesion symptoms.
+Your sole purpose is to help a user create a detailed log of their symptoms.
 
-# --- System Prompt for the Model ---
-SYSTEM_PROMPT = (
-    "You are a helpful and empathetic medical assistant specializing in post-surgery adhesion detection. "
-    "Your primary role is to ask clarifying questions about symptoms and affected body regions "
-    "and provide general post-surgery guidance. You must strictly adhere to the following rules:\n"
-    "1. Only discuss symptoms, affected body regions, and related post-surgery topics.\n"
-    "2. If the user asks for a diagnosis, medical advice, or prescription, you MUST refuse and advise them to consult a healthcare professional immediately. State that you are an AI assistant and cannot provide medical diagnoses.\n"
-    "3. If the user's query is unrelated to post-surgery symptoms or care, politely redirect them back to the topic.\n"
-    "4. Keep your responses concise, clear, and easy to understand for a non-medical person."
-)
+**Your Instructions:**
+1.  **Analyze Initial Input**: The user will provide an affected body region and initial symptoms.
+2.  **Ask ONE Question at a Time**: Based on their input, ask a single, targeted follow-up question to get more specific information.
+3.  **Region-Specific Questions**: Tailor your questions to the affected region.
+    -   **Abdomen/Pelvis**: Ask about bloating, bowel movement changes (constipation/diarrhea), sharp vs. dull pain, pain triggers (movement, eating), nausea, or vomiting.
+    -   **Chest/Thoracic**: Ask about shortness of breath, pain during deep breaths, coughing, or a feeling of tightness.
+    -   **Joints (Shoulder/Knee)**: Ask about range of motion, stiffness, popping/clicking sounds, or pain during specific movements.
+4.  **Maintain Focus**: Do not deviate from symptom tracking. If the user asks for a diagnosis, medical advice, or an unrelated question, politely guide them back by stating your purpose is only for symptom logging.
+5.  **Be Concise**: Keep your questions clear and to the point.
 
+Start the conversation by asking the first logical follow-up question based on the user's initial details.
+"""
 
-# --- Initialize Session State ---
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+# Function to initialize the Gemini chat model
+def initialize_chat():
+    """Initializes the Gemini Pro model and starts a chat session with the system prompt."""
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    chat = model.start_chat(history=[
+        {'role': 'user', 'parts': [SYSTEM_PROMPT]},
+        {'role': 'model', 'parts': ["Understood. I am ready to assist with post-surgery adhesion symptom tracking. Please provide the affected region and initial symptoms."]}
+    ])
+    return chat
 
+# --- Streamlit App UI and Logic ---
 
-# --- Function to call Gemini API ---
-def get_gemini_response(user_input: str, api_key: str) -> str:
-    """
-    Calls the Gemini API to get a response based on user input.
+# Initialize session state variables
+if "step" not in st.session_state:
+    st.session_state.step = 0
+if "chat" not in st.session_state:
+    st.session_state.chat = None
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "region" not in st.session_state:
+    st.session_state.region = None
 
-    Args:
-        user_input: The user's message.
-        api_key: The Google AI API key.
+st.title("🩺 Post-Surgery Adhesion Tracker")
+st.markdown("This tool helps you create a detailed log of your symptoms after surgery by asking targeted questions. This is **not** medical advice.")
 
-    Returns:
-        The model's response as a string.
-    """
-    try:
-        # Configure the generative AI library with the API key
-        genai.configure(api_key=api_key)
+# --- Step 0: Confirm Surgery ---
+if st.session_state.step == 0:
+    st.subheader("Step 1: Confirm Surgery")
+    st.write("Have you had a recent surgery?")
+    
+    col1, col2 = st.columns([1, 5]) # Make 'Yes' button smaller
+    
+    if col1.button("Yes", use_container_width=True):
+        st.session_state.step = 1
+        st.rerun()
+        
+    if col2.button("No", use_container_width=True):
+        st.info("This tool is specifically designed for tracking symptoms after a surgical procedure. If you have health concerns, please consult a medical professional.", icon="ℹ️")
+        st.session_state.step = -1 # A terminal state
 
-        # Initialize the model - Using gemini-1.0-pro for broader availability
-        model = genai.GenerativeModel(
-            model_name='gemini-1.0-pro',
-            system_instruction=SYSTEM_PROMPT
-        )
+# --- Step 1: Select Region ---
+if st.session_state.step == 1:
+    st.subheader("Step 2: Identify the Region")
+    st.write("Please select the region where you had the surgery.")
+    
+    region_options = ["Abdomen", "Pelvis", "Chest/Thoracic", "Joint (e.g., Shoulder, Knee)"]
+    st.session_state.region = st.selectbox("Select the affected body region:", region_options)
+    
+    if st.button("Confirm Region"):
+        st.session_state.step = 2
+        st.rerun()
 
-        # Generate content
-        response = model.generate_content(user_input)
-
-        return response.text
-
-    except Exception as e:
-        st.error(f"An error occurred while contacting the AI model: {str(e)}")
-        return "Sorry, I'm having trouble responding right now. Please check the API key and try again."
-
-
-def main():
-    """Main function to run the Streamlit app."""
-    st.title("🩺 Post-Surgery Adhesion Tracker")
-    st.markdown("This tool helps you track symptoms that might be related to post-surgical adhesions. This is not a diagnostic tool. **Always consult a healthcare professional for medical advice.**")
-
-    # --- API Key Input ---
-    # Using st.secrets is the recommended way for deployed apps.
-    # For local development, you can use the text input.
-    try:
-        # Check for the API key in Streamlit secrets
-        api_key = st.secrets["GEMINI_API_KEY"]
-    except (FileNotFoundError, KeyError):
-        # If not found, ask the user to input it
-        st.info("Please provide your Google AI API Key to begin.", icon="🔑")
-        api_key = st.text_input(
-            "Enter your Google AI API Key:",
-            type="password",
-            key="api_key_input",
-            help="You can get your key from Google AI Studio."
-        )
-
-    if not api_key:
-        st.warning("An API key is required to use the tracker.")
-        st.stop()
-
-
-    # --- User Input Fields ---
+# --- Step 2: Describe Symptoms ---
+if st.session_state.step == 2:
+    st.subheader(f"Step 3: Describe Symptoms for the **{st.session_state.region}** region")
     with st.form("symptom_form"):
-        st.subheader("Describe Your Current Condition")
-        col1, col2 = st.columns(2)
-        with col1:
-            symptom_input = st.text_area(
-                "Describe your symptoms in detail:",
-                placeholder="E.g., sharp pain in the lower abdomen, feeling bloated after eating, persistent nausea.",
-                key="symptom_input",
-                height=150
-            )
-        with col2:
-            region_input = st.selectbox(
-                "Select the primary affected region:",
-                ["", "Abdomen", "Pelvis", "Chest", "Lower back", "Other"],
-                key="region_input"
-            )
+        initial_symptoms = st.text_area(
+            "Please describe your current symptoms:",
+            placeholder="e.g., 'I have a sharp, pulling pain on my right side when I stand up straight.'",
+            height=150
+        )
+        submitted = st.form_submit_button("Start AI Tracking")
+        
+        if submitted and initial_symptoms:
+            st.session_state.chat = initialize_chat()
+            st.session_state.messages = [] # Reset messages for a new log
+            
+            first_message = f"Region: {st.session_state.region}\n\nInitial Symptoms: {initial_symptoms}"
+            st.session_state.messages.append({"role": "user", "content": first_message})
+            
+            with st.spinner("Analyzing..."):
+                response = st.session_state.chat.send_message(first_message)
+                st.session_state.messages.append({"role": "assistant", "content": response.text})
+            
+            st.session_state.step = 3 # Move to the chat view
+            st.rerun()
 
-        submit_button = st.form_submit_button("Submit Symptoms")
+# --- Step 3: Chat Interface ---
+if st.session_state.step == 3:
+    st.info(f"You are now in a chat to detail your symptoms for the **{st.session_state.region}** region. Answer the assistant's questions below.", icon="💬")
+    
+    # Display chat history
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-    if submit_button and symptom_input and region_input:
-        user_question = f"My symptoms are: '{symptom_input}'. The primary affected region is: {region_input}."
-        with st.spinner("Analyzing..."):
-            response = get_gemini_response(user_question, api_key)
-            st.session_state.chat_history.append({"user": user_question, "bot": response})
-    elif submit_button:
-        st.warning("Please describe your symptoms and select an affected region before submitting.")
+    # Chat input for user's response
+    if prompt := st.chat_input("Your response..."):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        with st.spinner("Thinking..."):
+            response = st.session_state.chat.send_message(prompt)
+            st.session_state.messages.append({"role": "assistant", "content": response.text})
+            with st.chat_message("assistant"):
+                st.markdown(response.text)
+        st.rerun()
 
-
-    # --- Display Chat History ---
-    if st.session_state.chat_history:
-        st.subheader("Your Tracking History")
-        for chat in reversed(st.session_state.chat_history):
-            st.markdown(f"""
-                <div class="chat-container">
-                    <div class="chat-box user"><b>You:</b><br>{chat['user']}</div>
-                    <div class="chat-box bot"><b>Assistant:</b><br>{chat['bot']}</div>
-                </div>
-            """, unsafe_allow_html=True)
-
-
-if __name__ == "__main__":
-    main()
-
+# --- Universal "Start Over" Button ---
+# Placed in the sidebar for easy access from any step
+if st.session_state.step > 0:
+    if st.sidebar.button("Start Over"):
+        # Reset all relevant session state variables
+        st.session_state.step = 0
+        st.session_state.messages = []
+        st.session_state.chat = None
+        st.session_state.region = None
+        st.rerun()
