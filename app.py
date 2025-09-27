@@ -74,9 +74,9 @@ def get_gemini_response(user_input: str, api_key: str) -> str:
         # Configure the generative AI library with the API key
         genai.configure(api_key=api_key)
 
-        # Initialize the model - Using gemini-pro for stability
+        # Initialize the model - Using gemini-1.0-pro for broader availability
         model = genai.GenerativeModel(
-            model_name='gemini-pro',
+            model_name='gemini-1.0-pro',
             system_instruction=SYSTEM_PROMPT
         )
 
